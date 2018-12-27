@@ -44,6 +44,12 @@ struct VectorizedScatteredArray{E,M,T,N,Np1} <: AbstractScatteredArray{E,M,T,N,N
     ptr::Ptr{E}
     size::NTuple{Np1,Int}
 end
+struct ScatteredArrayView{E,M,T,new_N,N,Np1,V} <: AbstractScatteredArray{E,M,T,new_N,Np1}
+    ptr::Ptr{E}
+    size::NTuple{new_N,Int}
+    full_size::NTuple{Np1,Int}
+    view::V
+end
 
 function VectorizationBase.vectorizable(ScA::ScatteredArray{E,M,T,N,Np1}) where {E,M,T,N,Np1}
     ptr_data = pointer(ScA.data)
@@ -55,6 +61,8 @@ end
         $(Expr(:call, :*, [:(vsa.size[$n]) for n ∈ 1:N]...))
     end
 end
+
+@inline Base.size(ScA::ScatteredArrayView) = ScA.size
 
 const ScatteredVector{E,M,T} = ScatteredArray{E,M,T,1,2}
 const ScatteredMatrix{E,M,T} = ScatteredArray{E,M,T,2,3}
@@ -128,17 +136,88 @@ end
     end
 end
 
+
 ## Lifted from metaprogramming documentation
+# @generated function sub2ind_quote(dims::NTuple{N}, I::NTuple{N}) where N
+#    ex = :(I[$N] - 1)
+#    for i = (N - 1):-1:1
+#        ex = :(I[$i] - 1 + dims[$i] * $ex)
+#    end
+#    :($ex + 1)
+# end
 @generated function sub2ind(dims::NTuple{N}, I::NTuple{N}) where N
    ex = :(I[$N] - 1)
    for i = (N - 1):-1:1
        ex = :(I[$i] - 1 + dims[$i] * $ex)
    end
    quote
-       Expr(:meta,:inline)
+       $(Expr(:meta,:inline))
        $ex + 1
    end
 end
+
+function scattered_array_view_inds(V, N)
+    inds = Expr[]
+    i = 0
+    for n ∈ 1:N
+        if V.parameters[n] == Colon
+            i += 1
+            push!(inds, :(i[$i]))
+        else
+            push!(inds, :(ScA.view[$n]))
+        end
+    end
+    inds
+end
+
+@generated function Base.getindex(ScA::ScatteredArrayView{E,M,T,new_N,N,Np1,V},
+                        i::Vararg{<:Any,new_N}) where {E,M,T,new_N,N,Np1,V}
+    inds = scattered_array_view_inds(V, N)
+    ind_expr = Expr[]
+    for j in 1:type_length(T)
+        push!(ind_expr, quote
+            I = $(Expr(:tuple,inds...,j))
+            unsafe_load(ScA.ptr, sub2ind(ScA.full_size, I))
+        end)
+    end
+    quote
+        $(Expr(:meta, :inline))
+        dims =
+        $(construct_expr(T, ind_expr))
+    end
+end
+@generated function Base.setindex!(ScA::ScatteredArrayView{E,M,T,new_N,N,Np1,V}, v,
+                        i::Vararg{<:Any,new_N}) where {E,M,T,new_N,N,Np1,V}
+    inds = scattered_array_view_inds(V, N)
+    q = quote
+        $(Expr(:meta, :inline))
+    end
+    for j ∈ 1:type_length(T)
+        push!(q.args, quote
+            unsafe_store!(ScA.ptr, v[LinearStorage(), $j], sub2ind(ScA.full_size, $(Expr(:tuple,inds...,j))))
+        end)
+    end
+    push!(q.args, :(v))
+    q
+end
+@inline function Base.view(ScA::ScatteredArray{E,M,T,N,Np1}, i::Vararg{<:Any,N}) where {E,M,T,N,Np1}
+    ScatteredArrayView(ScA, i)
+end
+@generated function ScatteredArrayView(ScA::ScatteredArray{E,M,T,N,Np1}, i::V) where {E,M,T,N,Np1,V}
+    new_N = 0
+    new_size = Expr(:tuple)
+    for n ∈ 1:N
+        if V.parameters[n] == Colon
+            new_N += 1
+            push!(new_size.args, :(full_size[$n]))
+        end
+    end
+    quote
+        full_size = size(ScA.data)
+        ScatteredArrayView{$E,$M,$T,$new_N,$N,$Np1,$V}(pointer(ScA.data), $new_size, full_size, i)
+    end
+end
+
 
 # @inline function SArray{Tuple{S},T,N,L}(vs::Vararg{SIMDPirates.SVec{W,T},L}) where {S,T,N,L,W}
 #     SArray{S}(vs...)
