@@ -51,6 +51,14 @@ struct ScatteredArrayView{E,M,T,new_N,N,Np1,V} <: AbstractScatteredArray{E,M,T,n
     view::V
 end
 
+@inline Base.pointer(ScA::ScatteredArray) = pointer(ScA.data)
+@inline Base.pointer(ScA::Union{VectorizedScatteredArray,ScatteredArrayView}) = ScA.ptr
+@inline Base.unsafe_convert(::Type{Ptr{T}}, ScA::AbstractScatteredArray{T}) where T = pointer(ScA)
+@inline function Base.unsafe_convert(::Type{Ptr{T}}, ScA::AbstractScatteredArray) where T
+    Base.unsafe_convert(Ptr{T}, pointer(ScA))
+end
+@inline Base.convert(::Type{Ptr{T}}, ScA::AbstractScatteredArray) where T = Base.unsafe_convert(Ptr{T}, ScA)
+
 function VectorizationBase.vectorizable(ScA::ScatteredArray{E,M,T,N,Np1}) where {E,M,T,N,Np1}
     ptr_data = pointer(ScA.data)
     VectorizedScatteredArray{E,M,T,N,Np1}(ptr_data, size(ScA.data))
@@ -173,28 +181,32 @@ end
 @generated function Base.getindex(ScA::ScatteredArrayView{E,M,T,new_N,N,Np1,V},
                         i::Vararg{<:Any,new_N}) where {E,M,T,new_N,N,Np1,V}
     inds = scattered_array_view_inds(V, N)
-    ind_expr = Expr[]
-    for j in 1:type_length(T)
-        push!(ind_expr, quote
-            I = $(Expr(:tuple,inds...,j))
-            unsafe_load(ScA.ptr, sub2ind(ScA.full_size, I))
-        end)
-    end
-    quote
+    # The strategy is to calculate the first index, as well as the stride between indices.
+    # After the first index is calculated, the remaining indices can be calcualted much more
+    # efficiently via the stide.
+    q = quote
         $(Expr(:meta, :inline))
-        dims =
-        $(construct_expr(T, ind_expr))
+        stride = $(Expr(:call, :*, [:(ScA.full_size[$n]) for n ∈ 1:N]...))
+        ind_1 = sub2ind(ScA.full_size, $(Expr(:tuple,inds...,1)))
     end
+    for j ∈ 2:type_length(T)
+        push!(q.args, :($(Symbol(:ind_,j)) = ind_1 + stride * $(j-1)))
+    end
+    push!(q.args, construct_expr(T, [:(unsafe_load(ScA.ptr, $(Symbol(:ind_,j)))) for j ∈ 1:type_length(T)]))
+    q
 end
 @generated function Base.setindex!(ScA::ScatteredArrayView{E,M,T,new_N,N,Np1,V}, v,
                         i::Vararg{<:Any,new_N}) where {E,M,T,new_N,N,Np1,V}
     inds = scattered_array_view_inds(V, N)
     q = quote
         $(Expr(:meta, :inline))
+        stride = $(Expr(:call, :*, [:(ScA.full_size[$n]) for n ∈ 1:N]...))
+        ind_1 = sub2ind(ScA.full_size, $(Expr(:tuple,inds...,1)))
+        unsafe_store!(ScA.ptr, v[LinearStorage(), 1], ind_1)
     end
-    for j ∈ 1:type_length(T)
+    for j ∈ 2:type_length(T)
         push!(q.args, quote
-            unsafe_store!(ScA.ptr, v[LinearStorage(), $j], sub2ind(ScA.full_size, $(Expr(:tuple,inds...,j))))
+            unsafe_store!(ScA.ptr, v[LinearStorage(), $j], ind_1 + stride * $(j-1))
         end)
     end
     push!(q.args, :(v))
