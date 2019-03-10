@@ -13,7 +13,7 @@ const MultiDimIndex{N} = Union{Tuple{Vararg{<:Integer, N}}, NTuple{N,<:Integer},
 include("utilities.jl")
 include("types.jl")
 include("scattered_struct_array.jl")
-include("chunked_Struct_array.jl")
+include("chunked_struct_array.jl")
 
 
 end # module
