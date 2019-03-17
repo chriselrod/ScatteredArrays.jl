@@ -30,7 +30,7 @@ struct LinearStorage end
 abstract type AbstractScatteredArray{E,M,A<:AbstractArray{E,M},N,Np1} <: AbstractArray{A,N} end
 
 
-@generated function Base.getindex(A::AbstractFixedSizePaddedArray{S,T,N,P,L}, ::LinearStorage, i::Vararg{<:Integer,NI}) where {S,T,N,P,L,NI}
+@generated function Base.getindex(A::PaddedMatrices.AbstractFixedSizePaddedArray{S,T,N,P,L}, ::LinearStorage, i::Vararg{<:Integer,NI}) where {S,T,N,P,L,NI}
     if N == 1 || ( (S.parameters[1] == P) && (NI == 1) )
         @assert NI == 1
         return quote

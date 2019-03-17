@@ -19,7 +19,7 @@ struct VectorizedChunkedArray{E,M,T,N,Np2} <: AbstractScatteredArray{E,M,T,N,Np2
     ptr::Ptr{E}
     size::NTuple{Np2,Int}
 end
-struct ChunkedArrayView{E,M,T,new_N,N,Np1,V} <: AbstractScatteredArray{E,M,T,new_N,Np2}
+struct ChunkedArrayView{E,M,T,new_N,N,Np2,V} <: AbstractScatteredArray{E,M,T,new_N,Np2}
     ptr::Ptr{E}
     size::NTuple{new_N,Int}
     full_size::NTuple{Np2,Int}
