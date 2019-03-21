@@ -27,6 +27,15 @@ struct LinearStorage end
 @inline Base.getindex(A::AbstractArray, ::LinearStorage, i::Vararg{Any,N} where N) = getindex(A, i...)
 @inline Base.setindex!(A::AbstractArray, v, ::LinearStorage, i::Vararg{Any,N} where N) = setindex!(A, v, i...)
 
+"""
+AbstractScatteredArray{E,M,A,N,Np1}
+Parameters are:
+E: Element type of the constituent arrays.
+M: Dimensionality of the constituent arrays.
+A: Type of the constituent arrays; element type of the scattered array.
+N: Dimensionality of the scattered arrays.
+Np1: N + 1; dimensionality of the stored data.
+"""
 abstract type AbstractScatteredArray{E,M,A<:AbstractArray{E,M},N,Np1} <: AbstractArray{A,N} end
 
 

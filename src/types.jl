@@ -1,3 +1,5 @@
+
+
 struct ScatteredArray{E,M,T,N,Np1} <: AbstractScatteredArray{E,M,T,N,Np1}
     data::Array{E,Np1}
 end
