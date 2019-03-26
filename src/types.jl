@@ -14,6 +14,10 @@ struct ScatteredArrayView{E,M,T,new_N,N,Np1,V} <: AbstractScatteredArray{E,M,T,n
     view::V
 end
 
+"""
+Data axis for a chunked_array of mats are:
+W x (chunked_array[2:N]) x mat x chunked_array[1] ÷ W
+"""
 struct ChunkedArray{E,M,T,N,Np2} <: AbstractScatteredArray{E,M,T,N,Np2}
     data::Array{E,Np2}
 end
