@@ -38,10 +38,17 @@ end
 
 
 
+@generated function Base.getindex(ScA::ChunkedArray{E,M,T,1,3}, i::Integer, j::Integer) where {E,M,T}
+    q = chunked_ind_base_quote(E)
+    # inds = [:(i[$n]) for n in 2:N]
+    ind_expr = [Expr(:call, :getindex, :(ScA.data), :i1, k, :i2) for k ∈ 1:type_length(T)]
+    push!(q.args, construct_expr(T, ind_expr))
+    q
+end
 @generated function Base.getindex(ScA::ChunkedArray{E,M,T,N,Np2}, i::Vararg{<:Integer,N}) where {E,M,T,N,Np2}
     q = chunked_ind_base_quote(E)
     inds = [:(i[$n]) for n in 2:N]
-    ind_expr = [Expr(:call, :getindex, :(ScA.data), :i1, inds..., j, :i2) for j in 1:type_length(T)]
+    ind_expr = [Expr(:call, :getindex, :(ScA.data), :i1, inds..., j, :i2) for j ∈ 1:type_length(T)]
     push!(q.args, construct_expr(T, ind_expr))
     q
 end
@@ -50,7 +57,7 @@ end
                         i::MultiDimIndex{N}) where {E,M,T,N,Np2}
     q = chunked_ind_base_quote(E)
     inds = [:(i[$n]) for n in 2:N]
-    ind_expr = [Expr(:call, :getindex, :(ScA.data), :i1, inds..., j, :i2) for j in 1:type_length(T)]
+    ind_expr = [Expr(:call, :getindex, :(ScA.data), :i1, inds..., j, :i2) for j ∈ 1:type_length(T)]
     push!(q.args, construct_expr(T, ind_expr))
     q
 end
@@ -210,7 +217,7 @@ end
     quote
         $(Expr(:meta, :inline))
         s = size(ScA.data)
-        @inbounds $(Expr(:tuple, s[1]*s[end], [:(s[$n]) for n ∈ 2:N]...))
+        @inbounds $(Expr(:tuple, :(s[1]*s[end]), [:(s[$n]) for n ∈ 2:N]...))
     end
 end
 @inline Base.size(ScA::ChunkedArray{E,M,T,N,Np2}, n::Integer) where {E,M,T,N,Np2} = n == 1 ? size(ScA.data, 1)*size(ScA.data, Np2) : size(ScA.data, n)

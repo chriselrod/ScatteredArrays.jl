@@ -4,7 +4,7 @@ module ScatteredArrays
 using VectorizationBase, SIMDPirates, StaticArrays, Base.Cartesian, PaddedMatrices
 import PaddedMatrices: type_length
 
-export ScatteredArray, ScatteredVector, ScatteredMatrix, LinearStorage
+export ScatteredArray, ScatteredVector, ScatteredMatrix, LinearStorage, ChunkedArray
 
 const MultiDimIndex{N} = Union{Tuple{Vararg{<:Integer, N}}, NTuple{N,<:Integer}, CartesianIndex{N}}
 
