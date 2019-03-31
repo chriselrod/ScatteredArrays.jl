@@ -142,6 +142,20 @@ end
 # @inline function SArray{Tuple{S},T,N,L}(vs::Vararg{SIMDPirates.SVec{W,T},L}) where {S,T,N,L,W}
 #     SArray{S}(vs...)
 # end
+@inline function Base.:+(i::Integer, v::VectorizedChunkedArray{E,M,T,N,Np2}) where {E,M,T,N,Np2}
+    VectorizedChunkedArray{E,M,T,N,Np2}(v.ptr + sizeof(T) * i, v.size)
+end
+@inline function Base.:+(v::VectorizedChunkedArray{E,M,T,N,Np2}, i::Integer) where {E,M,T,N,Np2}
+    VectorizedChunkedArray{E,M,T,N,Np2}(v.ptr + sizeof(T) * i, v.size)
+end
+@generated function SIMDPirates.vload(::Type{V}, vScA::VectorizedChunkedArray{E,M,T,N,Np2}) where {E,M,T,N,Np2,W, V <: Union{SIMDPirates.SVec{W,E},SIMDPirates.Vec{W,E}}}
+    W_full, Wshift_full = VectorizationBase.pick_vector_width_shift(E)
+    inds = [:(i[$n]) for n in 2:N]
+    quote
+        $(Expr(:meta,:inline))
+        $(construct_expr(T, [Expr(:call, :vload, V, :(vScA.ptr + $(W_full*j))) for j ∈ 0:type_length(T)-1]))
+    end
+end
 
 function chunked_vload_quote(N, W, E, T, V)
     W_full, Wshift_full = VectorizationBase.pick_vector_width_shift(E)
