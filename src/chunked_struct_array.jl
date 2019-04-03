@@ -150,10 +150,9 @@ end
 end
 @generated function SIMDPirates.vload(::Type{V}, vScA::VectorizedChunkedArray{E,M,T,N,Np2}) where {E,M,T,N,Np2,W, V <: Union{SIMDPirates.SVec{W,E},SIMDPirates.Vec{W,E}}}
     W_full, Wshift_full = VectorizationBase.pick_vector_width_shift(E)
-    inds = [:(i[$n]) for n in 2:N]
     quote
         $(Expr(:meta,:inline))
-        $(construct_expr(T, [Expr(:call, :vload, V, :(vScA.ptr + $(W_full*j))) for j ∈ 0:type_length(T)-1]))
+        $(construct_expr(T, [Expr(:call, :vload, V, :(vScA.ptr + $(W_full*sizeof(E)*j))) for j ∈ 0:type_length(T)-1]))
     end
 end
 
