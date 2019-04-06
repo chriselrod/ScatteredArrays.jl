@@ -133,21 +133,21 @@ end
 
 @generated function SIMDPirates.vload(::Type{SIMDPirates.SVec{W,E}}, vScA::VectorizedScatteredArray{E,M,T,N,Np1},
                                                 # i::CartesianIndex{N}) where {E,M,T,N,Np1,W}
-                                                i::Vararg{<:Integer,N}) where {E,M,T,N,Np1,W, V <: Union{SIMDPirates.SVec{W,E},SIMDPirates.Vec{W,E}}}
-    scattered_vload_quote(N, W, E, T, V)
+                                                i::Vararg{<:Integer,N}) where {E,M,T,N,Np1,W}
+    scattered_vload_quote(N, W, E, T, SIMDPirates.SVec{W,E})
 end
 @generated function SIMDPirates.vload(::Type{SIMDPirates.SVec{W,E}}, vScA::VectorizedScatteredArray{E,M,T,N,Np1},
                                                 # i::Vararg{<:Integer,N}) where {E,M,T,N,Np1,W}
-                                                i::MultiDimIndex{N}) where {E,M,T,N,Np1,W, V <: Union{SIMDPirates.SVec{W,E},SIMDPirates.Vec{W,E}}}
-    scattered_vload_quote(N, W, E, T, V)
+                                                i::MultiDimIndex{N}) where {E,M,T,N,Np1,W}
+    scattered_vload_quote(N, W, E, T, SIMDPirates.SVec{W,E})
 end
 
 @generated function SIMDPirates.vload(::Type{SIMDPirates.SVec{W,E}}, vScA::VectorizedScatteredArray{E,M,T,N,Np1},
                                                 # i::Vararg{<:Integer,N}) where {E,M,T,N,Np1,W}
-                                                i::Integer) where {E,M,T,N,Np1,W, V <: Union{SIMDPirates.SVec{W,E},SIMDPirates.Vec{W,E}}}
+                                                i::Integer) where {E,M,T,N,Np1,W}
     quote
         $(Expr(:meta,:inline))
-        $(construct_expr(T, [Expr(:call, :vload, V, :(vScA.ptr),
+        $(construct_expr(T, [Expr(:call, :vload, SIMDPirates.SVec{W,E}, :(vScA.ptr),
             :(i + length(vScA)*$(j-1)) ) for j in 1:type_length(T)]))
     end
 end
