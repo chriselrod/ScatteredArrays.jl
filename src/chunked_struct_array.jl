@@ -123,7 +123,7 @@ end
 @inline function Base.view(ScA::ChunkedArray{E,M,T,N,Np2}, i::Vararg{<:Any,N}) where {E,M,T,N,Np2}
     ChunkedArrayView(ScA, i)
 end
-@generated function ChunkedArrayView(ScA::ChunkedArray{E,M,T,N,Np2}, i::V) where {E,M,T,N,Np2,V}
+@generated function ChunkedArrayView(ScA::ChunkedArray{E,M,T,N,Np2,U}, i::V) where {E,M,T,N,Np2,V,U}
     new_N = 0
     new_size = Expr(:tuple)
     for n ∈ 1:N
@@ -134,7 +134,7 @@ end
     end
     quote
         full_size = size(ScA.data)
-        ChunkedArrayView{$E,$M,$T,$new_N,$N,$Np2,$V}(pointer(ScA.data), $new_size, full_size, i)
+        ChunkedArrayView{$E,$M,$T,$new_N,$N,$Np2,$V,$U}(pointer(ScA.data), $new_size, full_size, i, ScA.mask)
     end
 end
 
@@ -143,10 +143,10 @@ end
 #     SArray{S}(vs...)
 # end
 @inline function Base.:+(i::Integer, v::VectorizedChunkedArray{E,M,T,N,Np2}) where {E,M,T,N,Np2}
-    VectorizedChunkedArray{E,M,T,N,Np2}(v.ptr + sizeof(T) * i, v.size)
+    VectorizedChunkedArray{E,M,T,N,Np2}(v.ptr + sizeof(T) * i, v.fullsize)
 end
 @inline function Base.:+(v::VectorizedChunkedArray{E,M,T,N,Np2}, i::Integer) where {E,M,T,N,Np2}
-    VectorizedChunkedArray{E,M,T,N,Np2}(v.ptr + sizeof(T) * i, v.size)
+    VectorizedChunkedArray{E,M,T,N,Np2}(v.ptr + sizeof(T) * i, v.fullsize)
 end
 @generated function SIMDPirates.vload(::Type{V}, vScA::VectorizedChunkedArray{E,M,T,N,Np2}) where {E,M,T,N,Np2,W, V <: Union{SIMDPirates.SVec{W,E},SIMDPirates.Vec{W,E}}}
     W_full, Wshift_full = VectorizationBase.pick_vector_width_shift(E)
@@ -162,7 +162,7 @@ function chunked_vload_quote(N, W, E, T, V)
     quote
         $(Expr(:meta,:inline))
         $(construct_expr(T, [Expr(:call, :vload, V, :(vScA.ptr),
-            Expr(:call, :sub2ind, :(vScA.size), Expr(:tuple, 1, inds..., j, 1 + :( (i[1]-1) >> $Wshift_full ) ))) for j in 1:type_length(T)]))
+            Expr(:call, :sub2ind, :(vScA.fullsize), Expr(:tuple, 1, inds..., j, 1 + :( (i[1]-1) >> $Wshift_full ) ))) for j in 1:type_length(T)]))
     end
 end
 
@@ -206,9 +206,13 @@ end
     isbitstype(T) || thrownotisbitserror(T)
     TL = type_length(T)
     W, Wshift = VectorizationBase.pick_vector_width_shift(E)
+    U = VectorizationBase.mask_type(T)
     quote
-        ScA = ChunkedArray{$E,$M,$T,$N,$(N+2)}(
-            Array{$E}(undef, $(Expr(:tuple, W, [:(size(A,$n)) for n ∈ 2:N]..., TL, :(size(A,1) >> $Wshift) )) )
+        L = size(A,1)
+        mask = VectorizationBase.mask_from_remainder($T, L & $(W-1))
+        ScA = ChunkedArray{$E,$M,$T,$N,$(N+2),$U}(
+            Array{$E}(undef, $(Expr(:tuple, W, [:(size(A,$n)) for n ∈ 2:N]..., TL, :((L+$(W-1)) >> $Wshift) )) ),
+            size(A), mask
         )
         @inbounds copyto!(ScA, A)
     end
@@ -219,25 +223,34 @@ end
     # @show T
     TL = type_length(T)
     W, Wshift = VectorizationBase.pick_vector_width_shift(E)
+    U = VectorizationBase.mask_type(T)
     quote
-        ChunkedArray{$E,$M,$T,$N,$Np2}(
-            Array{$E}(undef, $(Expr(:tuple, W, [:(I[$n]) for n ∈ 2:N]..., TL, :(I[1] >> $Wshift))) )
+        L = I[1]
+        mask = VectorizationBase.mask_from_remainder($T, L & $(W-1))
+        ChunkedArray{$E,$M,$T,$N,$Np2,$U}(
+            Array{$E}(undef, $(Expr(:tuple, W, [:(I[$n]) for n ∈ 2:N]..., TL, :(I[1] >> $Wshift))) ),
+            I, mask
         )
     end
 end
 
-@generated function Base.size(ScA::ChunkedArray{E,M,T,N,Np2}) where {E,M,T,N,Np2}
-    quote
-        $(Expr(:meta, :inline))
-        s = size(ScA.data)
-        @inbounds $(Expr(:tuple, :(s[1]*s[end]), [:(s[$n]) for n ∈ 2:N]...))
-    end
+# @generated function Base.size(ScA::ChunkedArray{E,M,T,N,Np2}) where {E,M,T,N,Np2}
+#     quote
+#         $(Expr(:meta, :inline))
+#         s = size(ScA.data)
+#         @inbounds $(Expr(:tuple, :(s[1]*s[end]), [:(s[$n]) for n ∈ 2:N]...))
+#     end
+# end
+@inline Base.size(ScA::ChunkedArray) = ScA.size
+@inline function Base.size(ScA::ChunkedArray{E,M,T,N}, n::Integer) where {E,M,T,N}
+    @boundscheck n > N && ThrowBoundsError("$n > N, the number of dimensions.")
+    @inbounds ScA.size[n]
 end
-@inline Base.size(ScA::ChunkedArray{E,M,T,N,Np2}, n::Integer) where {E,M,T,N,Np2} = n == 1 ? size(ScA.data, 1)*size(ScA.data, Np2) : size(ScA.data, n)
+# @inline Base.size(ScA::ChunkedArray{E,M,T,N,Np2}, n::Integer) where {E,M,T,N,Np2} = n == 1 ? size(ScA.data, 1)*size(ScA.data, Np2) : size(ScA.data, n)
 @inline function Base.length(ScA::ChunkedArray{E,M,T,N,Np2}) where {E,M,T,N,Np2}
-    s = size(ScA.data)
-    @inbounds l = s[Np2]
-    @inbounds for n ∈ 1:N
+    s = ScA.size
+    @inbounds l = s[1]
+    @inbounds for n ∈ 2:N
         l *= s[n]
     end
     l

@@ -18,18 +18,21 @@ end
 Data axis for a chunked_array of mats are:
 W x (chunked_array[2:N]) x mat x chunked_array[1] ÷ W
 """
-struct ChunkedArray{E,M,T,N,Np2} <: AbstractScatteredArray{E,M,T,N,Np2}
+struct ChunkedArray{E,M,T,N,Np2,U<:Unsigned} <: AbstractScatteredArray{E,M,T,N,Np2}
     data::Array{E,Np2}
+    size::NTuple{N,Int}
+    mask::U
 end
 struct VectorizedChunkedArray{E,M,T,N,Np2} <: AbstractScatteredArray{E,M,T,N,Np2}
     ptr::Ptr{E}
-    size::NTuple{Np2,Int}
+    fullsize::NTuple{Np2,Int}
 end
-struct ChunkedArrayView{E,M,T,new_N,N,Np2,V} <: AbstractScatteredArray{E,M,T,new_N,Np2}
+struct ChunkedArrayView{E,M,T,new_N,N,Np2,V,U<:Unsigned} <: AbstractScatteredArray{E,M,T,new_N,Np2}
     ptr::Ptr{E}
     size::NTuple{new_N,Int}
     full_size::NTuple{Np2,Int}
     view::V
+    mask::U
 end
 
 const AbstractVectorizedScatteredArray{E,M,T,N,Np1} = Union{VectorizedScatteredArray{E,M,T,N,Np1},VectorizedChunkedArray{E,M,T,N,Np1}}
