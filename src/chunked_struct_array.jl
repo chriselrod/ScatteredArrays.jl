@@ -156,7 +156,7 @@ end
     end
 end
 @generated function PaddedMatrices.vload!(
-                A::MutableFixedSizePaddedArray{S,NTuple{W,Core.VecElement{E}},N3,P2,L2},
+                A::PaddedMatrices.AbstractMutableFixedSizePaddedArray{S,NTuple{W,Core.VecElement{E}},N3,P2,L2},
                 vScA::VectorizedChunkedArray{E,M,ConstantFixedSizePaddedArray{S,E,N3,P1,L1},N,Np2}
             ) where {E,M,N,Np2,W,S,P1,L1,P2,L2,N3}
     W_full, Wshift_full = VectorizationBase.pick_vector_width_shift(E)
