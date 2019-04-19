@@ -156,8 +156,7 @@ end
             ) where {E,M,T,N,Np1,W}
     quote
         $(Expr(:meta,:inline))
-        $(construct_expr(T, [Expr(:call, :vload, SIMDPirates.SVec{W,E}, :(vScA.ptr),
-            :(i + length(vScA)*$(j-1)) ) for j in 1:type_length(T)]))
+        $(construct_expr(T, [Expr(:call, :vload, SIMDPirates.SVec{W,E}, :(vScA.ptr + length(vScA)*$(sizeof(E)*(j-1))) ) for j in 1:type_length(T)]))
     end
 end
 
