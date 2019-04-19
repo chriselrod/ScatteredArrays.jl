@@ -166,7 +166,7 @@ end
         $(Expr(:meta,:inline))
         $(construct_expr(T,
             [Expr(:call, :convert, SVec{W,Ef1},
-                Expr(:call, :vload, SIMDPirates.SVec{W,Ef2}, :(vScA.ptr + length(vScA)*$(sizeof(E)*(j-1))) )) for j in 1:type_length(T)
+                Expr(:call, :vload, SIMDPirates.SVec{W,Ef2}, :(vScA.ptr + length(vScA)*$(sizeof(Ef2)*(j-1))) )) for j in 1:type_length(T)
         ])
         )
     end
