@@ -152,6 +152,13 @@ end
     end
 end
 
+@inline function Base.:+(i::Integer, v::VectorizedScatteredArray{E,M,T,N,Np1}) where {E,M,T,N,Np1}
+    VectorizedScatteredArray{E,M,T,N,Np1}(v.ptr + sizeof(T) * i, v.size)
+end
+@inline function Base.:+(v::VectorizedScatteredArray{E,M,T,N,Np1}, i::Integer) where {E,M,T,N,Np1}
+    VectorizedScatteredArray{E,M,T,N,Np1}(v.ptr + sizeof(T) * i, v.size)
+end
+
 function Base.copyto!(ScA::ScatteredArray{E,M,T,N,Np1}, A::AbstractArray{T}) where {E,M,T,N,Np1}
     @boundscheck size(ScA) == size(A) || throwdimensionmismatcherror(size(ScA), size(A))
     @inbounds for i in eachindex(A)
