@@ -151,12 +151,21 @@ end
             :(i + length(vScA)*$(j-1)) ) for j in 1:type_length(T)]))
     end
 end
+@generated function SIMDPirates.vload(
+                ::Type{SIMDPirates.SVec{W,E}}, vScA::VectorizedScatteredArray{E,M,T,N,Np1}
+            ) where {E,M,T,N,Np1,W}
+    quote
+        $(Expr(:meta,:inline))
+        $(construct_expr(T, [Expr(:call, :vload, SIMDPirates.SVec{W,E}, :(vScA.ptr),
+            :(i + length(vScA)*$(j-1)) ) for j in 1:type_length(T)]))
+    end
+end
 
 @inline function Base.:+(i::Integer, v::VectorizedScatteredArray{E,M,T,N,Np1}) where {E,M,T,N,Np1}
-    VectorizedScatteredArray{E,M,T,N,Np1}(v.ptr + sizeof(T) * i, v.size)
+    VectorizedScatteredArray{E,M,T,N,Np1}(v.ptr + sizeof(E) * i, v.size)
 end
 @inline function Base.:+(v::VectorizedScatteredArray{E,M,T,N,Np1}, i::Integer) where {E,M,T,N,Np1}
-    VectorizedScatteredArray{E,M,T,N,Np1}(v.ptr + sizeof(T) * i, v.size)
+    VectorizedScatteredArray{E,M,T,N,Np1}(v.ptr + sizeof(E) * i, v.size)
 end
 
 function Base.copyto!(ScA::ScatteredArray{E,M,T,N,Np1}, A::AbstractArray{T}) where {E,M,T,N,Np1}
