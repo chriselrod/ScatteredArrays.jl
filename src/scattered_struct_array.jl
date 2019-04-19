@@ -159,6 +159,18 @@ end
         $(construct_expr(T, [Expr(:call, :vload, SIMDPirates.SVec{W,E}, :(vScA.ptr + length(vScA)*$(sizeof(E)*(j-1))) ) for j in 1:type_length(T)]))
     end
 end
+@generated function SIMDPirates.vload(
+                ::Type{SIMDPirates.SVec{W,Ef1}}, vScA::VectorizedScatteredArray{Ef2,M,T,N,Np1}
+            ) where {Ef1,Ef2,M,T,N,Np1,W}
+    quote
+        $(Expr(:meta,:inline))
+        $(construct_expr(T,
+            [Expr(:call, :convert, SVec{W,Ef1}
+                Expr(:call, :vload, SIMDPirates.SVec{W,Ef2}, :(vScA.ptr + length(vScA)*$(sizeof(E)*(j-1))) ) for j in 1:type_length(T)
+        )])
+        )
+    end
+end
 
 @inline function Base.:+(i::Integer, v::VectorizedScatteredArray{E,M,T,N,Np1}) where {E,M,T,N,Np1}
     VectorizedScatteredArray{E,M,T,N,Np1}(v.ptr + sizeof(E) * i, v.size)
