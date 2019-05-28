@@ -182,7 +182,7 @@ end
     @assert W == W_full
     sv = S.parameters
     R = sv[1]
-    :(PaddedMatrices.PtrArray{$S,Vec{$W_full,$E},$(length(sv)),$R,$(prod(sv))}(vScA.ptr))
+    :(PaddedMatrices.PtrArray{$S,Vec{$W_full,$E},$(length(sv)),$R,$(prod(sv)),true}(vScA.ptr))
 end
 @generated function PaddedMatrices.vload!(
                 A::PaddedMatrices.AbstractMutableFixedSizePaddedArray{S,NTuple{W,Core.VecElement{E}},N3,P2,L2},
