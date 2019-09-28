@@ -63,9 +63,17 @@ end
 end
 
 
+@noinline function calc_stride(sv::Core.SimpleVector)
+    N = length(sv)
+    X = Vector{Int}(undef,N)
+    X[1] = 1
+    for n in 2:N
+        X[n] = X[n-1] * (sv[n])::Int
+    end
+    X
+end
 
-
-function chunked_array_view_inds(V, N, T)
+@noinline function chunked_array_view_inds(V, N, T)
     W, Wshift = VectorizationBase.pick_vector_width_shift(T)
     inds = Vector{Expr}(undef, N)
     if V.parameters[1] == Colon
@@ -123,7 +131,7 @@ end
 @generated function Base.setindex!(
                     ScA::ChunkedArrayView{E,M,T,new_N,N,Np2,V}, v,
                     i::Vararg{<:Any,new_N}
-                ) where {E,M,S,T<:PaddedMatrices.AbstractConstantFixedSizePaddedArray{S,E,M},new_N,N,Np2,V}
+                ) where {E,M,S,T<:PaddedMatrices.AbstractConstantFixedSizeArray{S,E,M},new_N,N,Np2,V}
     inds, indslast = chunked_array_view_inds(V, N, E)
     q = quote
         $(Expr(:meta, :inline))
@@ -177,16 +185,16 @@ end
 end
 @generated function SIMDPirates.vload(
                     ::Type{V}, vScA::VectorizedChunkedArray{E,M,T,N,Np2}
-                ) where {E,M,S,T<:PaddedMatrices.AbstractFixedSizePaddedArray{S},N,Np2,W, V <: Union{SIMDPirates.SVec{W,E},SIMDPirates.Vec{W,E}}}
+                ) where {E,M,S,T<:PaddedMatrices.AbstractFixedSizeArray{S},N,Np2,W, V <: Union{SIMDPirates.SVec{W,E},SIMDPirates.Vec{W,E}}}
     W_full, Wshift_full = VectorizationBase.pick_vector_width_shift(E)
     @assert W == W_full
     sv = S.parameters
-    R = sv[1]
-    :(PaddedMatrices.PtrArray{$S,Vec{$W_full,$E},$(length(sv)),$R,$(prod(sv)),true}(vScA.ptr))
+    R = calc_stride(sv)
+    :(PaddedMatrices.PtrArray{$S,Vec{$W_full,$E},$(length(sv)),$R,$(PaddedMatrices.simple_vec_prod(sv)),true}(vScA.ptr))
 end
 @generated function PaddedMatrices.vload!(
-                A::PaddedMatrices.AbstractMutableFixedSizePaddedArray{S,NTuple{W,Core.VecElement{E}},N3,P2,L2},
-                vScA::VectorizedChunkedArray{E,M,ConstantFixedSizePaddedArray{S,E,N3,P1,L1},N,Np2}
+                A::PaddedMatrices.AbstractMutableFixedSizeArray{S,NTuple{W,Core.VecElement{E}},N3,P2,L2},
+                vScA::VectorizedChunkedArray{E,M,ConstantFixedSizeArray{S,E,N3,P1,L1},N,Np2}
             ) where {E,M,N,Np2,W,S,P1,L1,P2,L2,N3}
     W_full, Wshift_full = VectorizationBase.pick_vector_width_shift(E)
     quote
@@ -265,16 +273,17 @@ end
         @inbounds copyto!(ScA, A)
     end
 end
-@generated function ChunkedArray(A::AbstractArray{T,N}) where {E,M,S,T <: PaddedMatrices.AbstractFixedSizePaddedArray{S,E,M},N}
+@generated function ChunkedArray(A::AbstractArray{T,N}) where {E,M,S,T <: PaddedMatrices.AbstractFixedSizeArray{S,E,M},N}
     isbitstype(T) || thrownotisbitserror(T)
     TL = type_length(T)
     W, Wshift = VectorizationBase.pick_vector_width_shift(E)
     U = VectorizationBase.mask_type(T)
     sv = S.parameters
+    X = calc_stride(sv)
     quote
         L = size(A,1)
         mask = VectorizationBase.mask_from_remainder($T, L & $(W-1))
-        ScA = ChunkedArray{$E,$M,PaddedMatrices.ConstantFixedSizePaddedArray{$S,$E,$M,$(sv[1]),$(prod(sv))},$N,$(N+2),$U}(
+        ScA = ChunkedArray{$E,$M,PaddedMatrices.ConstantFixedSizeArray{$S,$E,$M,$(Tuple{X...}),$(PaddedMatrices.simple_vec_prod(sv))},$N,$(N+2),$U}(
             Array{$E}(undef, $(Expr(:tuple, W, [:(size(A,$n)) for n ∈ 2:N]..., TL, :((L+$(W-1)) >> $Wshift) )) ),
             size(A), mask
         )

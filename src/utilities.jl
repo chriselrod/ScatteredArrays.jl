@@ -40,8 +40,8 @@ Np1: N + 1; dimensionality of the stored data.
 abstract type AbstractScatteredArray{E,M,A<:AbstractArray{E,M},N,Np1} <: AbstractArray{A,N} end
 
 
-@generated function Base.getindex(A::PaddedMatrices.AbstractFixedSizePaddedArray{S,T,N,P,L}, ::LinearStorage, i::Vararg{<:Integer,NI}) where {S,T,N,P,L,NI}
-    if N == 1 || ( (S.parameters[1] == P) && (NI == 1) )
+@generated function Base.getindex(A::PaddedMatrices.AbstractFixedSizeArray{S,T,N,X,L}, ::LinearStorage, i::Vararg{<:Integer,NI}) where {S,T,N,X,L,NI}
+    if N == 1 || ( ((S.parameters[1])::Int == (X.parameters[2])::Int) && (NI == 1) )
         @assert NI == 1
         return quote
             $(Expr(:meta,:inline))
