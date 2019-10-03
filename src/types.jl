@@ -80,9 +80,9 @@ end
 function construct_expr(::Type{T}, args) where {T <: Tuple}
     Expr(:tuple, args...)
 end
-function construct_expr(::Type{T}, args) where {S,T <: SArray{S}}
-    Expr(:call, :(SArray{$S}), args...)
-end
+# function construct_expr(::Type{T}, args) where {S,T <: SArray{S}}
+#     Expr(:call, :(SArray{$S}), args...)
+# end
 function construct_expr(::Type{T}, args) where {S,T <: ConstantFixedSizeArray{S}}
     Expr(:call, :(ConstantFixedSizeArray{$S}), Expr(:tuple, args...))
 end

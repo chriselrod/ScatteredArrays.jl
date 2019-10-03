@@ -1,7 +1,7 @@
 module ScatteredArrays
 
 
-using VectorizationBase, SIMDPirates, StaticArrays, Base.Cartesian, PaddedMatrices
+using VectorizationBase, SIMDPirates, Base.Cartesian, PaddedMatrices
 import PaddedMatrices: type_length
 
 export ScatteredArray, ScatteredVector, ScatteredMatrix, LinearStorage, ChunkedArray

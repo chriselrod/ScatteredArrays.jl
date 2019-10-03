@@ -5,7 +5,7 @@
 # type_length(::NTuple{N}) where N= N
 # type_length(::SArray{S,T,N,L}) where {S,T,N,L} = L
 type_length(::Type{NTuple{N}}) where {N} = N
-type_length(::Type{SArray{S,T,N,L}}) where {S,T,N,L} = L
+# type_length(::Type{SArray{S,T,N,L}}) where {S,T,N,L} = L
 #type_length(::T) where {T} = type_length(T)
 type_length(::T) where {T} = (@show T; throw("$T fallback type_length"))
 type_length(::Type{A}) where {T,A<:AbstractArray{T}} = sizeof(A) ÷ sizeof(T)
