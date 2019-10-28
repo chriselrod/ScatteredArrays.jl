@@ -192,7 +192,7 @@ end
     R = calc_stride(sv)
     :(PaddedMatrices.PtrArray{$S,Vec{$W_full,$E},$(length(sv)),$R,$(PaddedMatrices.simple_vec_prod(sv)),true}(vScA.ptr))
 end
-@generated function PaddedMatrices.vload!(
+@generated function vload!(
                 A::PaddedMatrices.AbstractMutableFixedSizeArray{S,NTuple{W,Core.VecElement{E}},N3,P2,L2},
                 vScA::VectorizedChunkedArray{E,M,ConstantFixedSizeArray{S,E,N3,P1,L1},N,Np2}
             ) where {E,M,N,Np2,W,S,P1,L1,P2,L2,N3}
