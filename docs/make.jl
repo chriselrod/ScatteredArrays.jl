@@ -1,21 +1,21 @@
-using Documenter, ScatteredArrays
+using ScatteredArrays
+using Documenter
 
 makedocs(;
     modules=[ScatteredArrays],
-    format=:html,
+    authors="Chris Elrod",
+    repo="https://github.com/chriselrod/ScatteredArrays.jl/blob/{commit}{path}#L{line}",
+    sitename="ScatteredArrays.jl",
+    format=Documenter.HTML(;
+        prettyurls=get(ENV, "CI", "false") == "true",
+        canonical="https://chriselrod.github.io/ScatteredArrays.jl",
+    ),
     pages=[
         "Home" => "index.md",
     ],
-    repo="https://github.com/chriselrod/ScatteredArrays.jl/blob/{commit}{path}#L{line}",
-    sitename="ScatteredArrays.jl",
-    authors="Chris Elrod",
-    assets=[],
+    strict=false,
 )
 
 deploydocs(;
     repo="github.com/chriselrod/ScatteredArrays.jl",
-    target="build",
-    julia="1.0",
-    deps=nothing,
-    make=nothing,
 )
